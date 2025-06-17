@@ -9,7 +9,7 @@ dependencies = [
     "pydantic>=2.11.0",
 ]
 authors = [
-    {name = "MCP Contributors"}
+    {name = "William Zhang", email = "mclamee@yeah.net"}
 ]
 license = {text = "MIT"}
 keywords = ["mcp", "credentials", "api", "fastmcp", "model-context-protocol"]
