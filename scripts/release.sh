@@ -157,9 +157,10 @@ info "Generated changelog:"
 echo "$CHANGELOG" | head -10
 echo "..."
 
-# Save changelog to file
-echo "$CHANGELOG" > "CHANGELOG-v$NEW_VERSION.md"
-info "Changelog saved to CHANGELOG-v$NEW_VERSION.md"
+# Save changelog to file in organized folder
+mkdir -p docs/changelogs
+echo "$CHANGELOG" > "docs/changelogs/v$NEW_VERSION.md"
+info "Changelog saved to docs/changelogs/v$NEW_VERSION.md"
 
 # Confirm release
 read -p "Create release v$NEW_VERSION? [y/N] " -n 1 -r
@@ -203,10 +204,12 @@ else
     success "Package installation test completed (server started successfully)"
 fi
 
-# Commit version change and updated lock file
-info "Committing version change and updated lock file..."
-git add pyproject.toml uv.lock
-git commit -m "Bump version to $NEW_VERSION"
+# Commit version change, updated lock file, and changelog
+info "Committing version change, updated lock file, and changelog..."
+git add pyproject.toml uv.lock docs/changelogs/v$NEW_VERSION.md
+git commit -m "Bump version to $NEW_VERSION
+
+$(echo "$CHANGELOG" | head -10)"
 
 # Create and push tag (this triggers PyPI publishing via GitHub Actions)
 info "Creating and pushing tag..."
@@ -215,10 +218,6 @@ git push origin main
 git push origin "v$NEW_VERSION"
 
 success "🚀 Tag v$NEW_VERSION pushed! PyPI publishing started automatically."
-
-# Clean up temporary changelog file
-rm -f "CHANGELOG-v$NEW_VERSION.md"
-
 success "Release process completed! 🎉"
 success "PyPI publishing is happening automatically via GitHub Actions"
 
