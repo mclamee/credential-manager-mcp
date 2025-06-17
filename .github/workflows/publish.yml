@@ -64,4 +64,44 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          print-hash: true 
+          print-hash: true
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: |
+            ## 🚀 Release ${{ github.ref_name }}
+
+            ### Installation
+            ```bash
+            uvx credential-manager-mcp
+            ```
+
+            ### What's Changed
+            - Version bump to ${{ github.ref_name }}
+            - See commit history for detailed changes
+
+            ### Configuration
+            Add to your MCP client config:
+            ```json
+            {
+              "mcpServers": {
+                "credential-manager": {
+                  "command": "uvx",
+                  "args": ["credential-manager-mcp"],
+                  "env": {
+                    "CREDENTIAL_MANAGER_READ_ONLY": "false"
+                  }
+                }
+              }
+            }
+            ```
+
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ github.ref_name }}...HEAD
+          files: |
+            ./dist/credential_manager_mcp-*.tar.gz
+            ./dist/credential_manager_mcp-*-py3-none-any.whl
+          draft: false
+          prerelease: false 
