@@ -25,9 +25,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/credential-manager-mcp"
-Repository = "https://github.com/yourusername/credential-manager-mcp"
-Issues = "https://github.com/yourusername/credential-manager-mcp/issues"
+Homepage = "https://github.com/mclamee/credential-manager-mcp"
+Repository = "https://github.com/mclamee/credential-manager-mcp"
+Issues = "https://github.com/mclamee/credential-manager-mcp/issues"
 
 [project.scripts]
 credential-manager-mcp = "credential_manager:main"

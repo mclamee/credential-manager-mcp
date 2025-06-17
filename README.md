@@ -1,6 +1,6 @@
 # 🔐 Credential Manager MCP Server
 
-[![Test](https://github.com/yourusername/credential-manager-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/yourusername/credential-manager-mcp/actions/workflows/test.yml)
+[![Test](https://github.com/mclamee/credential-manager-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/mclamee/credential-manager-mcp/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
