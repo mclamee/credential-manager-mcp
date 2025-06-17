@@ -33,6 +33,7 @@ jobs:
       url: https://pypi.org/p/credential-manager-mcp
     permissions:
       id-token: write  # For trusted publishing
+      contents: write  # For creating GitHub releases
     
     steps:
       - uses: actions/checkout@v4
