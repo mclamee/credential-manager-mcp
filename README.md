@@ -21,36 +21,57 @@ A FastMCP server for securely managing API credentials locally through the Model
 ## 📁 Project Structure
 ```
 credential-manager-mcp/
-├── credential_manager.py           # Main MCP server
-├── example_usage.py                # Usage demonstration script
-├── run_tests.py                    # Test runner script
-├── pyproject.toml                  # Modern Python project configuration
-├── uv.lock                         # Locked dependencies for reproducibility
-├── README.md                       # Main documentation
-├── LICENSE                         # MIT license
-├── .github/workflows/test.yml      # GitHub Actions CI workflow
-├── .gitignore                      # Security exclusions
-├── test/                           # Test directory
-│   ├── __init__.py                 # Test package init
-│   ├── conftest.py                 # Pytest configuration
-│   └── test_credential_manager.py  # Comprehensive test suite
-└── docs/                           # Additional documentation
-    ├── CHANGELOG.md                # Version history
-    └── CONTRIBUTING.md             # Contributor guidelines
+├── credential_manager_mcp/          # Main package directory
+│   ├── __init__.py                  # Package initialization
+│   └── server.py                    # MCP server implementation
+├── credential_manager.py            # Standalone server (for development)
+├── example_usage.py                 # Usage demonstration script
+├── run_tests.py                     # Test runner script
+├── pyproject.toml                   # Modern Python project configuration
+├── uv.lock                          # Locked dependencies for reproducibility
+├── README.md                        # Main documentation
+├── LICENSE                          # MIT license
+├── .github/workflows/test.yml       # GitHub Actions CI workflow
+├── .gitignore                       # Security exclusions
+├── test/                            # Test directory
+│   ├── __init__.py                  # Test package init
+│   ├── conftest.py                  # Pytest configuration
+│   └── test_credential_manager.py   # Comprehensive test suite
+└── docs/                            # Additional documentation
+    ├── CHANGELOG.md                 # Version history
+    └── CONTRIBUTING.md              # Contributor guidelines
 ```
 
 ## 🚀 Quick Start
+
+### 📦 Production Use (Recommended)
+
+For normal usage, install and run with `uvx` (no local setup required):
+
+```bash
+# Run directly with uvx (installs automatically)
+uvx credential-manager-mcp
+
+# Or install and run
+uvx install credential-manager-mcp
+uvx credential-manager-mcp
+```
+
+### 🛠️ Development Setup
+
+For development or when you want to run from source:
 
 ```bash
 # Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Setup project
+# Clone and setup project
+git clone https://github.com/mclamee/credential-manager-mcp.git
 cd credential-manager-mcp
-uv sync --dev                       # Install dependencies including dev tools
+uv sync --dev                        # Install dependencies including dev tools
 ```
 
-### Run Tests
+#### Run Tests
 ```bash
 # Run tests with pytest (recommended)
 uv run pytest test/ -v
@@ -62,20 +83,61 @@ uv run python run_tests.py
 uv run python test/test_credential_manager.py
 ```
 
-### Start Server
+#### Start Development Server
 ```bash
-uv run python credential_manager.py         # Start the server
+# Option 1: Run via package entry point (same as production)
+uv run credential-manager-mcp
+
+# Option 2: Run standalone file (for debugging/development)
+uv run python credential_manager.py
 ```
 
-## 🔗 Claude Desktop Integration
+## 🔗 MCP Client Integration
 
-Add to your `claude_desktop_config.json`:
+### Production Configuration (uvx)
+
+Add to your MCP client configuration (e.g., Claude Desktop's `claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "credential-manager": {
+      "command": "uvx",
+      "args": ["credential-manager-mcp"]
+    }
+  }
+}
+```
+
+### Development Configuration
+
+For development or running from source:
+
 ```json
 {
   "mcpServers": {
     "credential-manager": {
       "command": "uv",
-      "args": ["run", "python", "/path/to/credential-manager-mcp/credential_manager.py"]
+      "args": [
+        "--directory", "/path/to/credential-manager-mcp",
+        "run", "credential-manager-mcp"
+      ]
+    }
+  }
+}
+```
+
+Or using the standalone file:
+
+```json
+{
+  "mcpServers": {
+    "credential-manager": {
+      "command": "uv",
+      "args": [
+        "--directory", "/path/to/credential-manager-mcp",
+        "run", "python", "credential_manager.py"
+      ]
     }
   }
 }
@@ -140,6 +202,10 @@ uv run pytest test/ -v
 
 # Run demo script
 uv run python example_usage.py
+
+# Test package installation locally
+uv build
+uvx --from ./dist/credential_manager_mcp-*.whl credential-manager-mcp
 ```
 
 ## 🔒 Security Features
@@ -149,6 +215,16 @@ uv run python example_usage.py
 - **Secure defaults** - Comprehensive .gitignore prevents credential commits
 - **Permission control** - Set file permissions on credentials.json as needed
 - **Multi-instance safety** - File locking prevents race conditions between instances
+
+## 📦 Publishing
+
+```bash
+# Build the package
+uv build
+
+# Publish to PyPI (requires authentication)
+uv publish
+```
 
 ## 📖 More Information
 
