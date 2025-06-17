@@ -76,7 +76,10 @@ jobs:
           
           echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
           
-          # Generate changelog
+          # Create changelog directory
+          mkdir -p docs/changelogs
+          
+          # Generate changelog and save to organized location
           {
             echo "## 🚀 Release $CURRENT_TAG"
             echo ""
@@ -115,12 +118,14 @@ jobs:
               echo ""
               echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$CURRENT_TAG"
             fi
-          } > changelog.md
+          } | tee docs/changelogs/${CURRENT_TAG}.md
           
-          # Set output for next step
+          # Set output for next step (use the saved file)
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          cat changelog.md >> $GITHUB_OUTPUT
+          cat docs/changelogs/${CURRENT_TAG}.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "Changelog saved to docs/changelogs/${CURRENT_TAG}.md"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
