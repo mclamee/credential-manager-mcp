@@ -30,7 +30,6 @@ credential-manager-mcp/
 ├── .github/workflows/test.yml      # GitHub Actions CI workflow
 ├── .gitignore                      # Security exclusions
 └── docs/                           # Additional documentation
-    ├── SETUP.md                    # Quick setup guide
     ├── CHANGELOG.md                # Version history
     └── CONTRIBUTING.md             # Contributor guidelines
 ```
@@ -104,7 +103,6 @@ get_credential_details("credential-id-here")
 
 ## 📖 More Information
 
-- See [docs/SETUP.md](docs/SETUP.md) for detailed setup instructions
 - See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for development guidelines  
 - Check [docs/CHANGELOG.md](docs/CHANGELOG.md) for version history
 - Run `uv run python example_usage.py` for a complete demo
