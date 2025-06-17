@@ -1,215 +1,114 @@
-# Credential Manager MCP Server
+# 🔐 Credential Manager MCP Server
 
 [![Test](https://github.com/yourusername/credential-manager-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/yourusername/credential-manager-mcp/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-A FastMCP server for securely managing API credentials locally. This server allows you to store, retrieve, update, and delete credentials for various applications through the Model Context Protocol (MCP).
+A FastMCP server for securely managing API credentials locally through the Model Context Protocol (MCP). Store, retrieve, and manage your API tokens with security-first design.
 
-## Features
+## 🔧 Key Features
 
-- **Secure local storage**: Credentials stored in a local JSON file
-- **CRUD operations**: Create, Read, Update, Delete credentials
-- **Search functionality**: Find credentials by app name or username
-- **Security-focused**: Access tokens are hidden in listing operations
-- **Resource endpoints**: Get store information and help documentation
+1. **Secure local storage** - Credentials stored in JSON format
+2. **Complete CRUD operations** - Create, Read, Update, Delete credentials  
+3. **Security-focused design** - Access tokens hidden in listings
+4. **Search functionality** - Filter by app name or username
+5. **Resource endpoints** - Store info and help documentation
+6. **Auto-generated IDs** - UUID4 for unique credential identification
+7. **Flexible expiration** - Date strings or "never"
 
-## Installation
+## 📁 Project Structure
+```
+credential-manager-mcp/
+├── credential_manager.py           # Main MCP server
+├── test_credential_manager.py      # Comprehensive test suite
+├── pyproject.toml                  # Modern Python project configuration
+├── uv.lock                         # Locked dependencies for reproducibility
+├── example_usage.py                # Usage demonstration script
+├── .github/workflows/test.yml      # GitHub Actions CI workflow
+├── .gitignore                      # Security exclusions
+├── LICENSE                         # MIT license
+└── docs/                           # Documentation
+    ├── README.md                   # This file
+    ├── SETUP.md                    # Quick setup guide
+    ├── CHANGELOG.md                # Version history
+    └── CONTRIBUTING.md             # Contributor guidelines
+```
 
-### Using uv (Recommended)
+## 🚀 Quick Start
 
-1. Make sure you have [uv](https://docs.astral.sh/uv/) installed:
 ```bash
 # Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
-```
 
-2. Navigate to the project directory and sync dependencies:
-```bash
+# Setup project
 cd credential-manager-mcp
-uv sync
+uv sync                                      # Install dependencies
+uv run python test_credential_manager.py    # Run tests  
+uv run python credential_manager.py         # Start the server
 ```
 
-3. Run the server:
-```bash
-uv run python credential_manager.py
-```
-
-### Alternative: Using pip
-
-1. Create a virtual environment:
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-2. Install the dependencies:
-```bash
-pip install fastmcp pydantic
-```
-
-3. Run the server:
-```bash
-python credential_manager.py
-```
-
-## MCP Configuration
-
-To use this server with Claude Desktop or other MCP clients, add it to your MCP configuration:
-
-### Claude Desktop Configuration
+## 🔗 Claude Desktop Integration
 
 Add to your `claude_desktop_config.json`:
-
 ```json
 {
   "mcpServers": {
     "credential-manager": {
-      "command": "python",
-      "args": ["path/to/credential_manager.py"]
+      "command": "uv",
+      "args": ["run", "python", "/path/to/credential-manager-mcp/credential_manager.py"]
     }
   }
 }
 ```
 
-### Using fastmcp CLI
+## 🛠 Available Tools
 
-You can also install it using the fastmcp CLI:
+- `list_credentials()` - List all credentials (tokens hidden for security)
+- `get_credential_details(credential_id)` - Get full details including access token
+- `add_credential(app, base_url, access_token, [user_name], [expires])` - Add new credential  
+- `update_credential(credential_id, [fields...])` - Update existing credential
+- `delete_credential(credential_id)` - Delete a credential
+- `search_credentials([app_filter], [user_filter])` - Search credentials
 
-```bash
-# With uv
-uv run fastmcp install credential_manager.py
+## 📚 Available Resources
 
-# Or traditionally
-fastmcp install credential_manager.py
-```
+- `credential://store/info` - Store information and metadata
+- `credential://help` - Comprehensive help documentation
 
-## Available Tools
+## 💡 Example Usage
 
-### 1. `list_credentials()`
-Lists all stored credentials with access tokens hidden for security.
-
-**Returns**: Dictionary with credentials list and count
-
-### 2. `get_credential_details(credential_id: str)`
-Retrieves full details of a specific credential including the access token.
-
-**Parameters**:
-- `credential_id`: The unique ID of the credential
-
-**Returns**: Complete credential information
-
-### 3. `add_credential(app: str, base_url: str, access_token: str, user_name?: str, expires?: str)`
-Adds a new credential to the store.
-
-**Parameters**:
-- `app`: The target application name
-- `base_url`: The application's base URL
-- `access_token`: The API token/key
-- `user_name` (optional): Username associated with the credential
-- `expires` (optional): Expiration date string or "never" (default)
-
-**Returns**: Success status and generated credential ID
-
-### 4. `update_credential(credential_id: str, ...fields)`
-Updates an existing credential.
-
-**Parameters**:
-- `credential_id`: The unique ID of the credential
-- Any combination of: `app`, `base_url`, `access_token`, `user_name`, `expires`
-
-**Returns**: Success status and message
-
-### 5. `delete_credential(credential_id: str)`
-Deletes a credential from the store.
-
-**Parameters**:
-- `credential_id`: The unique ID of the credential
-
-**Returns**: Success status and message
-
-### 6. `search_credentials(app_filter?: str, user_filter?: str)`
-Searches credentials by app name or username.
-
-**Parameters**:
-- `app_filter` (optional): Filter by application name (case-insensitive)
-- `user_filter` (optional): Filter by username (case-insensitive)
-
-**Returns**: Filtered credentials list with count
-
-## Available Resources
-
-### `credential://store/info`
-Provides information about the credential store including:
-- Store file path
-- Total number of credentials
-- File existence status
-- Last modification time
-
-### `credential://help`
-Returns comprehensive help documentation for using the credential manager.
-
-## Data Structure
-
-Each credential contains the following fields:
-
-```json
-{
-  "app": "GitHub",
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "base_url": "https://api.github.com",
-  "access_token": "ghp_xxxxxxxxxxxxxxxxxxxx",
-  "user_name": "myusername",
-  "expires": "2024-12-31"
-}
-```
-
-## Examples
-
-### Adding a GitHub credential:
 ```python
+# Add a credential
 add_credential(
     app="GitHub",
-    base_url="https://api.github.com",
+    base_url="https://api.github.com", 
     access_token="ghp_xxxxxxxxxxxxxxxxxxxx",
     user_name="myusername",
     expires="2024-12-31"
 )
-```
 
-### Searching for GitHub credentials:
-```python
+# Search credentials
 search_credentials(app_filter="github")
+
+# Get full details (including token)
+get_credential_details("credential-id-here")
 ```
 
-### Getting full credential details:
-```python
-get_credential_details("550e8400-e29b-41d4-a716-446655440000")
-```
+## 🔒 Security Features
 
-## Security Notes
+- **Local storage only** - No network transmission of credentials
+- **Hidden tokens** - Access tokens hidden when listing credentials
+- **Secure defaults** - Comprehensive .gitignore prevents credential commits
+- **Permission control** - Set file permissions on credentials.json as needed
 
-- Credentials are stored locally in `credentials.json`
-- Access tokens are hidden when listing credentials
-- Use `get_credential_details()` only when you need the actual token
-- Consider setting appropriate file permissions on the credentials file
-- The server runs locally and doesn't transmit credentials over the network
+## 📖 More Information
 
-## Development
+- See [SETUP.md](SETUP.md) for detailed setup instructions
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines  
+- Check [CHANGELOG.md](CHANGELOG.md) for version history
+- Run `uv run python example_usage.py` for a complete demo
 
-To run in development mode with the MCP Inspector:
+## 📄 License
 
-```bash
-# With uv
-uv run fastmcp dev credential_manager.py
-
-# Or run tests
-uv run python test_credential_manager.py
-```
-
-This will start both the server and the MCP Inspector for testing and debugging.
-
-## License
-
-This project is open source and available under the MIT License. 
+MIT License - see [LICENSE](LICENSE) file for details. 
