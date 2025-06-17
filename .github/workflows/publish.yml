@@ -67,40 +67,67 @@ jobs:
         with:
           print-hash: true
       
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          CURRENT_TAG="${{ github.ref_name }}"
+          
+          echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
+          
+          # Generate changelog
+          {
+            echo "## 🚀 Release $CURRENT_TAG"
+            echo ""
+            if [[ -n "$PREVIOUS_TAG" ]]; then
+              echo "### What's Changed"
+              git log --oneline --pretty=format:"- %s (%h)" "$PREVIOUS_TAG"..HEAD | head -20
+            else
+              echo "### What's New"
+              echo "- Initial release of Credential Manager MCP Server"
+              echo "- Secure API credential management with read-only mode by default"
+              echo "- Multi-instance support with file locking"
+              echo "- Simple JSON storage in ~/.credential-manager-mcp/"
+            fi
+            echo ""
+            echo "### Installation"
+            echo "\`\`\`bash"
+            echo "uvx credential-manager-mcp"
+            echo "\`\`\`"
+            echo ""
+            echo "### Configuration"
+            echo "Add to your MCP client config:"
+            echo "\`\`\`json"
+            echo "{"
+            echo "  \"mcpServers\": {"
+            echo "    \"credential-manager\": {"
+            echo "      \"command\": \"uvx\","
+            echo "      \"args\": [\"credential-manager-mcp\"],"
+            echo "      \"env\": {"
+            echo "        \"CREDENTIAL_MANAGER_READ_ONLY\": \"false\""
+            echo "      }"
+            echo "    }"
+            echo "  }"
+            echo "}"
+            echo "\`\`\`"
+            if [[ -n "$PREVIOUS_TAG" ]]; then
+              echo ""
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$CURRENT_TAG"
+            fi
+          } > changelog.md
+          
+          # Set output for next step
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat changelog.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          body: |
-            ## 🚀 Release ${{ github.ref_name }}
-
-            ### Installation
-            ```bash
-            uvx credential-manager-mcp
-            ```
-
-            ### What's Changed
-            - Version bump to ${{ github.ref_name }}
-            - See commit history for detailed changes
-
-            ### Configuration
-            Add to your MCP client config:
-            ```json
-            {
-              "mcpServers": {
-                "credential-manager": {
-                  "command": "uvx",
-                  "args": ["credential-manager-mcp"],
-                  "env": {
-                    "CREDENTIAL_MANAGER_READ_ONLY": "false"
-                  }
-                }
-              }
-            }
-            ```
-
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ github.ref_name }}...HEAD
+          body: ${{ steps.changelog.outputs.changelog }}
           files: |
             ./dist/credential_manager_mcp-*.tar.gz
             ./dist/credential_manager_mcp-*-py3-none-any.whl

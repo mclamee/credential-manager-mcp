@@ -96,6 +96,71 @@ fi
 
 info "New version: $NEW_VERSION"
 
+# Generate changelog from git history
+generate_changelog() {
+    local new_version=$1
+    local last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+    
+    if [[ -n "$last_tag" ]]; then
+        info "Generating changelog from $last_tag to HEAD..."
+        echo "## 🚀 Release v$new_version"
+        echo ""
+        echo "### What's Changed"
+        
+        # Get commits since last tag, format them nicely
+        git log --oneline --pretty=format:"- %s (%h)" "$last_tag"..HEAD | head -20
+        
+        echo ""
+        echo "### Installation"
+        echo "\`\`\`bash"
+        echo "uvx credential-manager-mcp"
+        echo "\`\`\`"
+        echo ""
+        echo "### Configuration"
+        echo "\`\`\`json"
+        echo "{"
+        echo "  \"mcpServers\": {"
+        echo "    \"credential-manager\": {"
+        echo "      \"command\": \"uvx\","
+        echo "      \"args\": [\"credential-manager-mcp\"],"
+        echo "      \"env\": {"
+        echo "        \"CREDENTIAL_MANAGER_READ_ONLY\": \"false\""
+        echo "      }"
+        echo "    }"
+        echo "  }"
+        echo "}"
+        echo "\`\`\`"
+        
+        if [[ -n "$last_tag" ]]; then
+            echo ""
+            echo "**Full Changelog**: https://github.com/mclamee/credential-manager-mcp/compare/$last_tag...v$new_version"
+        fi
+    else
+        echo "## 🚀 Initial Release v$new_version"
+        echo ""
+        echo "### What's New"
+        echo "- Initial release of Credential Manager MCP Server"
+        echo "- Secure API credential management with read-only mode by default"
+        echo "- Multi-instance support with file locking"
+        echo "- Simple JSON storage in ~/.credential-manager-mcp/"
+        echo ""
+        echo "### Installation"
+        echo "\`\`\`bash"
+        echo "uvx credential-manager-mcp"
+        echo "\`\`\`"
+    fi
+}
+
+# Generate changelog for later use
+CHANGELOG=$(generate_changelog "$NEW_VERSION")
+info "Generated changelog:"
+echo "$CHANGELOG" | head -10
+echo "..."
+
+# Save changelog to file
+echo "$CHANGELOG" > "CHANGELOG-v$NEW_VERSION.md"
+info "Changelog saved to CHANGELOG-v$NEW_VERSION.md"
+
 # Confirm release
 read -p "Create release v$NEW_VERSION? [y/N] " -n 1 -r
 echo
@@ -150,6 +215,10 @@ git push origin main
 git push origin "v$NEW_VERSION"
 
 success "🚀 Tag v$NEW_VERSION pushed! PyPI publishing started automatically."
+
+# Clean up temporary changelog file
+rm -f "CHANGELOG-v$NEW_VERSION.md"
+
 success "Release process completed! 🎉"
 success "PyPI publishing is happening automatically via GitHub Actions"
 
