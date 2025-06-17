@@ -150,54 +150,6 @@ git push origin main
 git push origin "v$NEW_VERSION"
 
 success "🚀 Tag v$NEW_VERSION pushed! PyPI publishing started automatically."
-
-# Optionally create GitHub release for better UX (not required for PyPI publishing)
-if command -v gh >/dev/null 2>&1; then
-    info "Creating GitHub release for better UX..."
-    
-    # Generate release notes
-    RELEASE_NOTES=$(cat <<EOF
-## 🚀 Release v$NEW_VERSION
-
-### Installation
-\`\`\`bash
-uvx credential-manager-mcp
-\`\`\`
-
-### What's Changed
-- Version bump to $NEW_VERSION
-- See commit history for detailed changes
-
-### Configuration
-Add to your MCP client config:
-\`\`\`json
-{
-  "mcpServers": {
-    "credential-manager": {
-      "command": "uvx",
-      "args": ["credential-manager-mcp"],
-      "env": {
-        "CREDENTIAL_MANAGER_READ_ONLY": "false"
-      }
-    }
-  }
-}
-\`\`\`
-EOF
-    )
-    
-    gh release create "v$NEW_VERSION" \
-        --title "v$NEW_VERSION" \
-        --notes "$RELEASE_NOTES" \
-        ./dist/credential_manager_mcp-$NEW_VERSION.tar.gz \
-        ./dist/credential_manager_mcp-$NEW_VERSION-py3-none-any.whl
-    
-    success "GitHub release created! 🎉"
-else
-    info "GitHub CLI not installed - skipping GitHub release creation."
-    info "PyPI publishing will still work via the tag-triggered workflow."
-fi
-
 success "Release process completed! 🎉"
 success "PyPI publishing is happening automatically via GitHub Actions"
 
