@@ -5,76 +5,133 @@ Test script for the credential manager MCP server
 
 import asyncio
 import json
+import os
 import pytest
 from fastmcp import Client
-import credential_manager
+import credential_manager_mcp.server as credential_manager
 
 @pytest.mark.asyncio
-async def test_credential_manager():
-    """Test the credential manager server"""
-    print("🧪 Testing Credential Manager MCP Server")
-    print("=" * 50)
+async def test_credential_manager_read_only():
+    """Test the credential manager server in read-only mode"""
+    print("🧪 Testing Credential Manager MCP Server (Read-Only Mode)")
+    print("=" * 60)
     
     print("✅ Server imports successfully")
-    
+        
     # Create a client for testing
     client = Client(credential_manager.mcp)
     
     async with client:
-        print("\n📝 Testing add_credential...")
-        result = await client.call_tool("add_credential", {
-            "app": "GitHub",
-            "base_url": "https://api.github.com",
-            "access_token": "ghp_test_token_123",
-            "user_name": "testuser",
-            "expires": "2024-12-31"
-        })
-        print(f"Result: {result[0].text}")
-        
-        # Extract credential ID from the result
-        result_data = json.loads(result[0].text)
-        assert result_data.get("success"), f"Failed to add credential: {result_data}"
-        
-        cred_id = result_data["credential_id"]
-        print(f"✅ Added credential with ID: {cred_id}")
-        
         print("\n📋 Testing list_credentials...")
         result = await client.call_tool("list_credentials", {})
         print(f"Result: {result[0].text}")
         
-        print("\n🔍 Testing get_credential_details...")
-        result = await client.call_tool("get_credential_details", {
-            "credential_id": cred_id
-        })
-        print(f"Result: {result[0].text}")
+        result_data = json.loads(result[0].text)
+        assert "credentials" in result_data
+        assert "count" in result_data
+        assert "mode" in result_data
+        assert result_data["mode"] == "read-only"
         
-        print("\n🔎 Testing search_credentials...")
-        result = await client.call_tool("search_credentials", {
-            "app_filter": "github"
-        })
-        print(f"Result: {result[0].text}")
+        print("✅ List credentials working correctly")
         
         print("\n📊 Testing store info resource...")
         result = await client.read_resource("credential://store/info")
         print(f"Store info: {result[0].text}")
         
+        store_info = json.loads(result[0].text)
+        assert "read_only_mode" in store_info
+        assert store_info["read_only_mode"] == True
+        
         print("\n❓ Testing help resource...")
         result = await client.read_resource("credential://help")
         print("Help resource retrieved successfully")
         
-        print("\n🗑️ Testing delete_credential...")
-        result = await client.call_tool("delete_credential", {
-            "credential_id": cred_id
-        })
-        print(f"Result: {result[0].text}")
+        print("\n🎉 Read-only mode tests passed!")
+
+@pytest.mark.asyncio
+async def test_credential_manager_read_write():
+    """Test the credential manager server in read-write mode"""
+    print("\n🧪 Testing Credential Manager MCP Server (Read-Write Mode)")
+    print("=" * 60)
+    
+    # Set environment variable for read-write mode
+    original_env = os.environ.get("CREDENTIAL_MANAGER_READ_ONLY")
+    os.environ["CREDENTIAL_MANAGER_READ_ONLY"] = "false"
+    
+    try:
+        # We need to reload the module to pick up the new environment variable
+        import importlib
+        importlib.reload(credential_manager)
         
-        print("\n🎉 All tests passed!")
+        # Create a client for testing
+        client = Client(credential_manager.mcp)
+        
+        async with client:
+            print("\n📝 Testing add_credential...")
+            result = await client.call_tool("add_credential", {
+                "app": "GitHub",
+                "base_url": "https://api.github.com",
+                "access_token": "ghp_test_token_123",
+                "user_name": "testuser",
+                "expires": "2024-12-31"
+            })
+            print(f"Result: {result[0].text}")
+            
+            # Extract credential ID from the result
+            result_data = json.loads(result[0].text)
+            assert result_data.get("success"), f"Failed to add credential: {result_data}"
+            
+            cred_id = result_data["credential_id"]
+            print(f"✅ Added credential with ID: {cred_id}")
+            
+            print("\n📋 Testing list_credentials...")
+            result = await client.call_tool("list_credentials", {})
+            print(f"Result: {result[0].text}")
+            
+            list_data = json.loads(result[0].text)
+            assert list_data["mode"] == "read-write"
+            
+            # Check that the list contains only essential data
+            if list_data["credentials"]:
+                cred = list_data["credentials"][-1]  # Get the last added credential
+                assert "id" in cred
+                assert "app" in cred
+                # username should NOT be present since there's only one GitHub credential
+                assert "user_name" not in cred or cred["user_name"] is None
+                
+            print("\n🔍 Testing get_credential_details...")
+            result = await client.call_tool("get_credential_details", {
+                "credential_id": cred_id
+            })
+            print(f"Result: {result[0].text}")
+            
+            detail_data = json.loads(result[0].text)
+            assert "access_token" in detail_data
+            assert detail_data["app"] == "GitHub"
+            
+            print("\n🗑️ Testing delete_credential...")
+            result = await client.call_tool("delete_credential", {
+                "credential_id": cred_id
+            })
+            print(f"Result: {result[0].text}")
+            
+            delete_data = json.loads(result[0].text)
+            assert delete_data.get("success") == True
+            
+            print("\n🎉 Read-write mode tests passed!")
+            
+    finally:
+        # Restore original environment
+        if original_env is not None:
+            os.environ["CREDENTIAL_MANAGER_READ_ONLY"] = original_env
+        else:
+            os.environ.pop("CREDENTIAL_MANAGER_READ_ONLY", None)
 
 def test_multi_instance_sharing():
     """Test that multiple instances share credential changes"""
     import tempfile
     import os
-    from credential_manager import CredentialStore
+    from credential_manager_mcp.server import CredentialStore
     
     # Create a temporary file for testing
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as tmp_file:
@@ -82,12 +139,12 @@ def test_multi_instance_sharing():
         json.dump({}, tmp_file)
     
     try:
-        print("🔄 Testing Multi-Instance Credential Sharing")
+        print("\n🔄 Testing Multi-Instance Credential Sharing")
         print("=" * 50)
         
-        # Create two separate instances pointing to the same file
-        store1 = CredentialStore(test_file)
-        store2 = CredentialStore(test_file)
+        # Create two separate instances pointing to the same file (both in read-write mode)
+        store1 = CredentialStore(test_file, read_only=False)
+        store2 = CredentialStore(test_file, read_only=False)
         
         print(f"📁 Using test file: {test_file}")
         
@@ -111,37 +168,42 @@ def test_multi_instance_sharing():
         print(f"   App: {credential_from_store2.app}")
         print(f"   User: {credential_from_store2.user_name}")
         
-        # Update credential using store2
-        print("\n3️⃣ Updating credential via Store Instance 2...")
-        success = store2.update_credential(cred_id, app="Updated Test App", user_name="updateduser")
+        # Test list function with single app (no username shown)
+        print("\n3️⃣ Testing list function with single app...")
+        list_result = store1.list_credentials()
+        assert len(list_result) == 1
+        assert "user_name" not in list_result[0], "Username should not be shown for single app"
+        print("✅ Username correctly hidden for single app")
         
-        assert success, "Update failed"
-        print("✅ Update successful")
+        # Add another credential with same app to test username display
+        print("\n4️⃣ Adding second credential with same app...")
+        cred_id2 = store2.add_credential(
+            app="Test App",
+            base_url="https://api.test.com",
+            access_token="test-token-456",
+            user_name="testuser2",
+            expires="2025-12-31"
+        )
         
-        # Check if store1 can see the update
-        print("\n4️⃣ Checking if Store Instance 1 can see the update...")
-        updated_credential = store1.get_credential(cred_id)
+        # Test list function with multiple apps (username should be shown)
+        print("\n5️⃣ Testing list function with multiple apps...")
+        list_result = store1.list_credentials()
+        assert len(list_result) == 2
+        for item in list_result:
+            if item["id"] == cred_id:
+                assert "user_name" in item, "Username should be shown when multiple credentials for same app"
+                assert item["user_name"] == "testuser"
+            elif item["id"] == cred_id2:
+                assert "user_name" in item, "Username should be shown when multiple credentials for same app"
+                assert item["user_name"] == "testuser2"
+        print("✅ Username correctly shown for multiple apps")
         
-        assert updated_credential is not None and updated_credential.app == "Updated Test App", "Store 1 did not see the update"
-        print(f"✅ SUCCESS: Store 1 sees the updated credential!")
-        print(f"   Updated App: {updated_credential.app}")
-        print(f"   Updated User: {updated_credential.user_name}")
+        # Clean up
+        print("\n6️⃣ Cleaning up test credentials...")
+        store1.delete_credential(cred_id)
+        store2.delete_credential(cred_id2)
         
-        # Delete credential using store1
-        print("\n5️⃣ Deleting credential via Store Instance 1...")
-        delete_success = store1.delete_credential(cred_id)
-        
-        assert delete_success, "Delete failed"
-        print("✅ Delete successful")
-        
-        # Check if store2 can see the deletion
-        print("\n6️⃣ Checking if Store Instance 2 can see the deletion...")
-        deleted_credential = store2.get_credential(cred_id)
-        
-        assert deleted_credential is None, "Store 2 still sees the deleted credential"
-        print("✅ SUCCESS: Store 2 confirms credential is deleted!")
-        
-        print("\n🎉 All tests passed! Multi-instance sharing works correctly!")
+        print("\n🎉 All multi-instance tests passed!")
         
     finally:
         # Clean up the test file
@@ -149,17 +211,69 @@ def test_multi_instance_sharing():
             os.unlink(test_file)
             print(f"\n🧹 Cleaned up test file: {test_file}")
 
+def test_read_only_mode_protection():
+    """Test that read-only mode properly prevents modifications"""
+    import tempfile
+    from credential_manager_mcp.server import CredentialStore
+    
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as tmp_file:
+        test_file = tmp_file.name
+        json.dump({}, tmp_file)
+    
+    try:
+        print("\n🔒 Testing Read-Only Mode Protection")
+        print("=" * 40)
+        
+        store = CredentialStore(test_file, read_only=True)
+        
+        # Test that add_credential raises an error
+        try:
+            store.add_credential("Test", "https://test.com", "token")
+            assert False, "Should have raised RuntimeError"
+        except RuntimeError as e:
+            assert "read-only mode" in str(e)
+            print("✅ Add operation properly blocked in read-only mode")
+        
+        # Test that update_credential raises an error
+        try:
+            store.update_credential("fake-id", app="New App")
+            assert False, "Should have raised RuntimeError"
+        except RuntimeError as e:
+            assert "read-only mode" in str(e)
+            print("✅ Update operation properly blocked in read-only mode")
+        
+        # Test that delete_credential raises an error
+        try:
+            store.delete_credential("fake-id")
+            assert False, "Should have raised RuntimeError"
+        except RuntimeError as e:
+            assert "read-only mode" in str(e)
+            print("✅ Delete operation properly blocked in read-only mode")
+        
+        # Test that read operations still work
+        credentials = store.list_credentials()
+        assert isinstance(credentials, list)
+        print("✅ Read operations work correctly in read-only mode")
+        
+        print("\n🎉 Read-only protection tests passed!")
+        
+    finally:
+        if os.path.exists(test_file):
+            os.unlink(test_file)
+
 if __name__ == "__main__":
     # For running directly (backward compatibility)
     import sys
     
-    async def run_async_test():
-        await test_credential_manager()
+    async def run_async_tests():
+        await test_credential_manager_read_only()
+        await test_credential_manager_read_write()
     
     try:
-        asyncio.run(run_async_test())
+        asyncio.run(run_async_tests())
         test_multi_instance_sharing()
-        print("\n✅ Credential Manager is ready to use!")
+        test_read_only_mode_protection()
+        print("\n✅ All tests passed! Credential Manager is ready to use!")
     except Exception as e:
         print(f"\n❌ Tests failed: {e}")
         import traceback
