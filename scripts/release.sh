@@ -139,15 +139,17 @@ info "Committing version change..."
 git add pyproject.toml
 git commit -m "Bump version to $NEW_VERSION"
 
-# Create and push tag
+# Create and push tag (this triggers PyPI publishing via GitHub Actions)
 info "Creating and pushing tag..."
 git tag "v$NEW_VERSION"
 git push origin main
 git push origin "v$NEW_VERSION"
 
-# Create GitHub release
+success "🚀 Tag v$NEW_VERSION pushed! PyPI publishing started automatically."
+
+# Optionally create GitHub release for better UX (not required for PyPI publishing)
 if command -v gh >/dev/null 2>&1; then
-    info "Creating GitHub release..."
+    info "Creating GitHub release for better UX..."
     
     # Generate release notes
     RELEASE_NOTES=$(cat <<EOF
@@ -187,14 +189,13 @@ EOF
         ./dist/credential_manager_mcp-$NEW_VERSION-py3-none-any.whl
     
     success "GitHub release created! 🎉"
-    success "PyPI publishing will start automatically via GitHub Actions"
 else
-    warn "GitHub CLI not installed. Please create the release manually at:"
-    echo "https://github.com/mclamee/credential-manager-mcp/releases/new?tag=v$NEW_VERSION"
+    info "GitHub CLI not installed - skipping GitHub release creation."
+    info "PyPI publishing will still work via the tag-triggered workflow."
 fi
 
 success "Release process completed! 🎉"
-success "Version $NEW_VERSION will be published to PyPI automatically"
+success "PyPI publishing is happening automatically via GitHub Actions"
 
 echo
 info "Monitor the release at:"
