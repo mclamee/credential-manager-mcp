@@ -22,14 +22,14 @@ A FastMCP server for securely managing API credentials locally through the Model
 credential-manager-mcp/
 ├── credential_manager.py           # Main MCP server
 ├── test_credential_manager.py      # Comprehensive test suite
+├── example_usage.py                # Usage demonstration script
 ├── pyproject.toml                  # Modern Python project configuration
 ├── uv.lock                         # Locked dependencies for reproducibility
-├── example_usage.py                # Usage demonstration script
+├── README.md                       # Main documentation
+├── LICENSE                         # MIT license
 ├── .github/workflows/test.yml      # GitHub Actions CI workflow
 ├── .gitignore                      # Security exclusions
-├── LICENSE                         # MIT license
-└── docs/                           # Documentation
-    ├── README.md                   # This file
+└── docs/                           # Additional documentation
     ├── SETUP.md                    # Quick setup guide
     ├── CHANGELOG.md                # Version history
     └── CONTRIBUTING.md             # Contributor guidelines
@@ -104,9 +104,9 @@ get_credential_details("credential-id-here")
 
 ## 📖 More Information
 
-- See [SETUP.md](SETUP.md) for detailed setup instructions
-- See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines  
-- Check [CHANGELOG.md](CHANGELOG.md) for version history
+- See [docs/SETUP.md](docs/SETUP.md) for detailed setup instructions
+- See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for development guidelines  
+- Check [docs/CHANGELOG.md](docs/CHANGELOG.md) for version history
 - Run `uv run python example_usage.py` for a complete demo
 
 ## 📄 License
