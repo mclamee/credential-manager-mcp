@@ -108,6 +108,10 @@ info "Updating version in pyproject.toml..."
 sed -i.bak "s/version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" pyproject.toml
 rm pyproject.toml.bak
 
+# Update lock file
+info "Updating uv.lock file..."
+uv lock || error "Failed to update lock file"
+
 # Run tests
 info "Running tests..."
 uv run pytest test/ -v || error "Tests failed"
@@ -134,9 +138,9 @@ else
     success "Package installation test completed (server started successfully)"
 fi
 
-# Commit version change
-info "Committing version change..."
-git add pyproject.toml
+# Commit version change and updated lock file
+info "Committing version change and updated lock file..."
+git add pyproject.toml uv.lock
 git commit -m "Bump version to $NEW_VERSION"
 
 # Create and push tag (this triggers PyPI publishing via GitHub Actions)
