@@ -171,7 +171,7 @@ def test_multi_instance_sharing():
         # Test list function with single app (no username shown)
         print("\n3️⃣ Testing list function with single app...")
         list_result = store1.list_credentials()
-        assert len(list_result) == 1
+        assert len(list_result) == 1, f"Expected 1 credential, got {len(list_result)}: {list_result}"
         assert "user_name" not in list_result[0], "Username should not be shown for single app"
         print("✅ Username correctly hidden for single app")
         
@@ -184,18 +184,37 @@ def test_multi_instance_sharing():
             user_name="testuser2",
             expires="2025-12-31"
         )
+        print(f"✅ Added second credential with ID: {cred_id2}")
+        
+        # Small delay to ensure file operations complete in CI environment
+        import time
+        time.sleep(0.1)
+        
+        # Force both stores to reload to ensure they see all changes
+        store1.load_credentials(force=True)
+        store2.load_credentials(force=True)
         
         # Test list function with multiple apps (username should be shown)
         print("\n5️⃣ Testing list function with multiple apps...")
         list_result = store1.list_credentials()
-        assert len(list_result) == 2
+        print(f"   Found {len(list_result)} credentials: {list_result}")
+        assert len(list_result) == 2, f"Expected 2 credentials, got {len(list_result)}: {list_result}"
+        
+        # Verify both credentials have usernames displayed
+        found_cred1 = False
+        found_cred2 = False
         for item in list_result:
             if item["id"] == cred_id:
                 assert "user_name" in item, "Username should be shown when multiple credentials for same app"
                 assert item["user_name"] == "testuser"
+                found_cred1 = True
             elif item["id"] == cred_id2:
                 assert "user_name" in item, "Username should be shown when multiple credentials for same app"
                 assert item["user_name"] == "testuser2"
+                found_cred2 = True
+        
+        assert found_cred1, f"Could not find first credential {cred_id} in list"
+        assert found_cred2, f"Could not find second credential {cred_id2} in list"
         print("✅ Username correctly shown for multiple apps")
         
         # Clean up
