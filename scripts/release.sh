@@ -146,7 +146,7 @@ else
     success "Package installation test completed (server started successfully)"
 fi
 
-# Add files to git (let user commit manually)
+# Add and commit files automatically
 info "Adding version change, updated lock file, and changelog to git..."
 git add pyproject.toml uv.lock "$CHANGELOG_FILE"
 info "Files staged for commit:"
@@ -154,20 +154,42 @@ echo "  - pyproject.toml (version bump)"
 echo "  - uv.lock (updated dependencies)"
 echo "  - $CHANGELOG_FILE (generated changelog)"
 echo ""
-info "Ready to commit! You can run: git commit -m 'Bump version to $NEW_VERSION'"
 
-# Note: Tag creation and push should be done after committing
-info "⚠️  Remember to commit the staged files and create the tag:"
-echo ""
-echo "  git commit -m 'Bump version to $NEW_VERSION'"
-echo "  git tag 'v$NEW_VERSION'"
-echo "  git push origin main"
-echo "  git push origin 'v$NEW_VERSION'"
-echo ""
-success "Release preparation completed! 🎉"
-info "After pushing the tag, PyPI publishing will start automatically via GitHub Actions"
+info "Committing changes..."
+git commit -m "Bump version to $NEW_VERSION"
+success "Changes committed!"
 
+info "Creating tag v$NEW_VERSION..."
+git tag "v$NEW_VERSION"
+success "Tag v$NEW_VERSION created!"
+
+# Show what will be pushed
+echo ""
+info "Ready to push the following:"
+echo "  - Commit: $(git log -1 --oneline)"
+echo "  - Tag: v$NEW_VERSION"
+echo ""
+
+# Ask for confirmation to push
+read -p "Push changes and tag to origin? This will trigger PyPI publishing! [y/N] " -n 1 -r
 echo
-info "Monitor the release at:"
-echo "- GitHub Actions: https://github.com/mclamee/credential-manager-mcp/actions"
-echo "- PyPI: https://pypi.org/project/credential-manager-mcp/" 
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    info "Pushing to origin..."
+    git push origin main
+    git push origin "v$NEW_VERSION"
+    success "Release v$NEW_VERSION pushed! 🎉"
+    
+    echo ""
+    info "PyPI publishing will start automatically via GitHub Actions"
+    echo ""
+    info "Monitor the release at:"
+    echo "- GitHub Actions: https://github.com/mclamee/credential-manager-mcp/actions"
+    echo "- PyPI: https://pypi.org/project/credential-manager-mcp/"
+else
+    warn "Push cancelled. You can push manually later:"
+    echo ""
+    echo "  git push origin main"
+    echo "  git push origin 'v$NEW_VERSION'"
+    echo ""
+    info "After pushing the tag, PyPI publishing will start automatically via GitHub Actions"
+fi 

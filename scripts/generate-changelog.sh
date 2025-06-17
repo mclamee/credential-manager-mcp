@@ -87,9 +87,9 @@ fi
 
 # Auto-detect from-tag if not provided
 if [[ -z "$FROM_TAG" ]]; then
-    # Get the tag before the target version
-    FROM_TAG=$(git tag -l | sort -V | grep -B1 "^${VERSION}$" | head -n1 || echo "")
-    if [[ -n "$FROM_TAG" && "$FROM_TAG" != "$VERSION" ]]; then
+    # Get the latest tag (which should be the previous version)
+    FROM_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+    if [[ -n "$FROM_TAG" ]]; then
         info "Auto-detected previous tag: $FROM_TAG"
     else
         FROM_TAG=""
@@ -108,7 +108,7 @@ generate_changelog() {
         echo "### What's Changed"
         
         # Get commits since last tag, format them nicely
-        git log --oneline --pretty=format:"- %s (%h)" "$from_tag".."$version" | head -20
+        git log --oneline --pretty=format:"- %s (%h)" "$from_tag"..HEAD | head -20
         
         echo ""
         echo "### Installation"
@@ -173,7 +173,7 @@ mkdir -p docs/changelogs
 CHANGELOG_FILE="docs/changelogs/${VERSION}.md"
 info "Generating changelog for $VERSION..." >&2
 if [[ -n "$FROM_TAG" ]]; then
-    info "Generating changelog from $FROM_TAG to $VERSION..." >&2
+    info "Generating changelog from $FROM_TAG to HEAD..." >&2
 else
     info "Generating initial release changelog..." >&2
 fi
