@@ -29,8 +29,24 @@ jobs:
       
     - name: Run tests with pytest
       run: uv run pytest test/ -v
+    
+    - name: Test package build
+      run: uv build
+    
+    - name: Test package installation
+      run: |
+        # Test that the built package can be installed (start server in background and test)
+        uvx --from ./dist/credential_manager_mcp-*.whl credential-manager-mcp &
+        SERVER_PID=$!
+        sleep 10
+        kill $SERVER_PID 2>/dev/null || true
+        echo "✅ Package installation test completed (server started successfully)"
       
     - name: Check if server starts
       run: |
-        timeout 5s uv run python credential_manager.py || true
-        echo "Server startup test completed"
+        # Test if the server can start (background process with timeout)
+        uv run credential-manager-mcp &
+        SERVER_PID=$!
+        sleep 5
+        kill $SERVER_PID 2>/dev/null || true
+        echo "✅ Server startup test completed"

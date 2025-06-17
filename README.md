@@ -148,6 +148,26 @@ uv run credential-manager-mcp
 - **File locking** - Multi-instance safety
 - **ISO datetime validation** - Consistent date formats
 
+## 🚀 Releases
+
+### Automated Publishing
+This project uses automated publishing to PyPI via GitHub releases:
+
+```bash
+# Create a new release (requires GitHub CLI)
+./scripts/release.sh patch    # 1.0.0 → 1.0.1
+./scripts/release.sh minor    # 1.0.0 → 1.1.0  
+./scripts/release.sh major    # 1.0.0 → 2.0.0
+./scripts/release.sh 1.2.3    # Specific version
+```
+
+**What happens automatically:**
+1. ✅ Tests run and pass
+2. 📦 Package builds successfully  
+3. 🏷️ Version tag created
+4. 📄 GitHub release published
+5. 🚀 PyPI package published automatically
+
 ## 📖 Resources
 
 - **Store info**: `credential://store/info`
