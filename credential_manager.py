@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+import fcntl
 from datetime import datetime
 from typing import Dict, List, Optional, Union
 from pathlib import Path
@@ -20,25 +21,53 @@ class Credential(BaseModel):
 class CredentialStore:
     def __init__(self, store_path: str = "credentials.json"):
         self.store_path = Path(store_path)
+        self._last_modified = None
         self.credentials: Dict[str, Credential] = {}
+        self._ensure_file_exists()
         self.load_credentials()
     
-    def load_credentials(self):
-        """Load credentials from JSON file"""
+    def _ensure_file_exists(self):
+        """Ensure the credentials file exists"""
+        if not self.store_path.exists():
+            self.store_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.store_path, 'w') as f:
+                json.dump({}, f)
+    
+    def _should_reload(self) -> bool:
+        """Check if file has been modified since last load"""
+        if not self.store_path.exists():
+            return True
+        
+        current_mtime = self.store_path.stat().st_mtime
+        if self._last_modified is None or current_mtime != self._last_modified:
+            self._last_modified = current_mtime
+            return True
+        return False
+    
+    def load_credentials(self, force: bool = False):
+        """Load credentials from JSON file if modified or forced"""
+        if not force and not self._should_reload():
+            return
+            
         if self.store_path.exists():
             try:
                 with open(self.store_path, 'r') as f:
-                    data = json.load(f)
-                    self.credentials = {
-                        cred_id: Credential(**cred_data) 
-                        for cred_id, cred_data in data.items()
-                    }
+                    # Use file locking for safe reading
+                    fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                    try:
+                        data = json.load(f)
+                        self.credentials = {
+                            cred_id: Credential(**cred_data) 
+                            for cred_id, cred_data in data.items()
+                        }
+                    finally:
+                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
             except (json.JSONDecodeError, Exception) as e:
                 print(f"Warning: Could not load credentials file: {e}")
                 self.credentials = {}
     
     def save_credentials(self):
-        """Save credentials to JSON file"""
+        """Save credentials to JSON file with file locking"""
         try:
             # Ensure directory exists
             self.store_path.parent.mkdir(parents=True, exist_ok=True)
@@ -49,14 +78,25 @@ class CredentialStore:
                 for cred_id, cred in self.credentials.items()
             }
             
+            # Use file locking for safe writing
             with open(self.store_path, 'w') as f:
-                json.dump(data, f, indent=2)
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    json.dump(data, f, indent=2)
+                finally:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+            
+            # Update our modification time tracking
+            self._last_modified = self.store_path.stat().st_mtime
         except Exception as e:
             print(f"Error saving credentials: {e}")
     
     def add_credential(self, app: str, base_url: str, access_token: str, 
                       user_name: Optional[str] = None, expires: Optional[str] = None) -> str:
         """Add a new credential and return its ID"""
+        # Reload to ensure we have latest data from other instances
+        self.load_credentials()
+        
         cred_id = str(uuid.uuid4())
         credential = Credential(
             app=app,
@@ -72,10 +112,14 @@ class CredentialStore:
     
     def get_credential(self, cred_id: str) -> Optional[Credential]:
         """Get a credential by ID"""
+        # Always reload to ensure fresh data
+        self.load_credentials()
         return self.credentials.get(cred_id)
     
     def list_credentials(self) -> List[Dict]:
         """List all credentials (without access tokens for security)"""
+        # Always reload to ensure fresh data
+        self.load_credentials()
         return [
             {
                 "id": cred.id,
@@ -89,6 +133,9 @@ class CredentialStore:
     
     def update_credential(self, cred_id: str, **updates) -> bool:
         """Update a credential"""
+        # Reload to ensure we have latest data from other instances
+        self.load_credentials()
+        
         if cred_id not in self.credentials:
             return False
         
@@ -102,6 +149,9 @@ class CredentialStore:
     
     def delete_credential(self, cred_id: str) -> bool:
         """Delete a credential"""
+        # Reload to ensure we have latest data from other instances
+        self.load_credentials()
+        
         if cred_id in self.credentials:
             del self.credentials[cred_id]
             self.save_credentials()
@@ -219,6 +269,8 @@ def search_credentials(app_filter: Optional[str] = None, user_filter: Optional[s
 @mcp.resource("credential://store/info")
 def get_store_info() -> dict:
     """Provides information about the credential store"""
+    # Reload to ensure fresh data
+    store.load_credentials()
     return {
         "store_path": str(store.store_path.absolute()),
         "total_credentials": len(store.credentials),

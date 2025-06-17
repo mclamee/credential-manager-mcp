@@ -25,12 +25,12 @@ jobs:
       run: uv python install ${{ matrix.python-version }}
       
     - name: Install dependencies
-      run: uv sync
+      run: uv sync --dev
       
-    - name: Run tests
-      run: uv run python test_credential_manager.py
+    - name: Run tests with pytest
+      run: uv run pytest test/ -v
       
     - name: Check if server starts
       run: |
         timeout 5s uv run python credential_manager.py || true
-        echo "Server startup test completed" 
+        echo "Server startup test completed"

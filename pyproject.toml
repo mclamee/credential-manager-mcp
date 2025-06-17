@@ -30,15 +30,37 @@ Repository = "https://github.com/mclamee/credential-manager-mcp"
 Issues = "https://github.com/mclamee/credential-manager-mcp/issues"
 
 [project.scripts]
-credential-manager-mcp = "credential_manager:main"
+credential-manager-mcp = "credential_manager_mcp:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
-include = ["credential_manager.py"]
+packages = ["credential_manager_mcp"]
+
+[tool.hatch.build]
+exclude = [
+    "test/",
+    "docs/",
+    ".*",
+    "credentials.json",
+    "*.py[cod]",
+    "__pycache__/",
+    "credential_manager.py",  # Keep the standalone file out of the package
+    "run_tests.py",
+    "example_usage.py",
+]
 
 [tool.uv]
-dev-dependencies = []
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
