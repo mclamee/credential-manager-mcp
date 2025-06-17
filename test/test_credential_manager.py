@@ -191,8 +191,8 @@ def test_multi_instance_sharing():
         time.sleep(0.1)
         
         # Force both stores to reload to ensure they see all changes
-        store1.load_credentials(force=True)
-        store2.load_credentials(force=True)
+        store1.load_credentials()
+        store2.load_credentials()
         
         # Test list function with multiple apps (username should be shown)
         print("\n5️⃣ Testing list function with multiple apps...")

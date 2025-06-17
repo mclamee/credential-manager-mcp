@@ -52,7 +52,6 @@ class CredentialStore:
         
         self.read_only = read_only
         self.credentials: Dict[str, Credential] = {}
-        self._last_modified = None
         
         # Ensure the storage directory exists
         self.store_path.parent.mkdir(parents=True, exist_ok=True)
@@ -65,22 +64,8 @@ class CredentialStore:
             with fcntl_lock(self.store_path, 'w') as f:
                 json.dump({}, f)
     
-    def _should_reload(self) -> bool:
-        """Check if file has been modified since last load"""
-        if not self.store_path.exists():
-            return True
-        
-        current_mtime = self.store_path.stat().st_mtime
-        if self._last_modified is None or current_mtime != self._last_modified:
-            self._last_modified = current_mtime
-            return True
-        return False
-    
-    def load_credentials(self, force: bool = False):
-        """Load credentials from JSON file if modified or forced"""
-        if not force and not self._should_reload():
-            return
-            
+    def load_credentials(self):
+        """Load credentials from JSON file - always read from disk"""
         if self.store_path.exists():
             try:
                 with open(self.store_path, 'r') as f:
@@ -97,6 +82,8 @@ class CredentialStore:
             except (json.JSONDecodeError, Exception) as e:
                 print(f"Warning: Could not load credentials file: {e}")
                 self.credentials = {}
+        else:
+            self.credentials = {}
     
     def save_credentials(self):
         """Save credentials to JSON file with file locking"""
@@ -120,9 +107,6 @@ class CredentialStore:
                     json.dump(data, f, indent=2)
                 finally:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-            
-            # Update our modification time tracking
-            self._last_modified = self.store_path.stat().st_mtime
         except Exception as e:
             print(f"Error saving credentials: {e}")
     
@@ -132,7 +116,7 @@ class CredentialStore:
         if self.read_only:
             raise RuntimeError("Cannot add credentials in read-only mode")
             
-        # Reload to ensure we have latest data from other instances
+        # Always read from disk before modifying
         self.load_credentials()
         
         cred_id = str(uuid.uuid4())
@@ -150,13 +134,13 @@ class CredentialStore:
     
     def get_credential(self, cred_id: str) -> Optional[Credential]:
         """Get a credential by ID"""
-        # Always reload to ensure fresh data
+        # Always read from disk to ensure fresh data
         self.load_credentials()
         return self.credentials.get(cred_id)
     
     def list_credentials(self) -> List[Dict]:
         """List all credentials with minimal essential data"""
-        # Always reload to ensure fresh data
+        # Always read from disk to ensure fresh data
         self.load_credentials()
         
         # Count apps to determine if we need to show usernames
@@ -182,7 +166,7 @@ class CredentialStore:
         if self.read_only:
             raise RuntimeError("Cannot update credentials in read-only mode")
             
-        # Reload to ensure we have latest data from other instances
+        # Always read from disk before modifying
         self.load_credentials()
         
         if cred_id not in self.credentials:
@@ -201,7 +185,7 @@ class CredentialStore:
         if self.read_only:
             raise RuntimeError("Cannot delete credentials in read-only mode")
             
-        # Reload to ensure we have latest data from other instances
+        # Always read from disk before modifying
         self.load_credentials()
         
         if cred_id in self.credentials:
@@ -319,7 +303,7 @@ if not READ_ONLY_MODE:
 @mcp.resource("credential://store/info")
 def get_store_info() -> dict:
     """Provides information about the credential store"""
-    # Reload to ensure fresh data
+    # Always read from disk to ensure fresh data
     store.load_credentials()
     
     # Get path information
