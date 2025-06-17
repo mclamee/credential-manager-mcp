@@ -9,6 +9,17 @@ from collections import Counter
 
 from fastmcp import FastMCP
 from pydantic import BaseModel
+from contextlib import contextmanager
+
+@contextmanager
+def fcntl_lock(file_path, mode='r'):
+    """Context manager for file locking"""
+    with open(file_path, mode) as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX if 'w' in mode else fcntl.LOCK_SH)
+        try:
+            yield f
+        finally:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 # Data models
 class Credential(BaseModel):
@@ -17,29 +28,42 @@ class Credential(BaseModel):
     base_url: str
     access_token: str
     user_name: Optional[str] = None
-    expires: Union[str, None] = None  # Can be date string or "never"
+    expires: Union[str, None] = None  # ISO datetime string or "never"
+    
+    def model_post_init(self, __context) -> None:
+        """Validate expires field format"""
+        if self.expires and self.expires != "never":
+            try:
+                # Validate ISO datetime format
+                datetime.fromisoformat(self.expires.replace('Z', '+00:00'))
+            except ValueError:
+                raise ValueError(f"expires must be ISO datetime format (YYYY-MM-DDTHH:MM:SS) or 'never', got: {self.expires}")
+
+def get_credentials_path() -> Path:
+    """Get the credentials storage path"""
+    return Path.home() / '.credential-manager-mcp' / 'credentials.json'
 
 class CredentialStore:
-    def __init__(self, store_path: str = "credentials.json", read_only: bool = True):
-        self.store_path = Path(store_path)
+    def __init__(self, store_path: Optional[str] = None, read_only: bool = True):
+        if store_path:
+            self.store_path = Path(store_path)
+        else:
+            self.store_path = get_credentials_path()
+        
         self.read_only = read_only
-        self._last_modified = None
         self.credentials: Dict[str, Credential] = {}
+        self._last_modified = None
+        
+        # Ensure the storage directory exists
+        self.store_path.parent.mkdir(parents=True, exist_ok=True)
         self._ensure_file_exists()
         self.load_credentials()
-    
+
     def _ensure_file_exists(self):
-        """Ensure the credentials file exists"""
+        """Create an empty credentials file if it doesn't exist"""
         if not self.store_path.exists():
-            if self.read_only:
-                # In read-only mode, create an empty file if it doesn't exist
-                self.store_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(self.store_path, 'w') as f:
-                    json.dump({}, f)
-            else:
-                self.store_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(self.store_path, 'w') as f:
-                    json.dump({}, f)
+            with fcntl_lock(self.store_path, 'w') as f:
+                json.dump({}, f)
     
     def _should_reload(self) -> bool:
         """Check if file has been modified since last load"""
@@ -297,12 +321,20 @@ def get_store_info() -> dict:
     """Provides information about the credential store"""
     # Reload to ensure fresh data
     store.load_credentials()
+    
+    # Get path information
+    store_path = store.store_path
+    expected_path = get_credentials_path()
+    
     return {
-        "store_path": str(store.store_path.absolute()),
+        "store_path": str(store_path.absolute()),
         "total_credentials": len(store.credentials),
-        "store_exists": store.store_path.exists(),
+        "store_exists": store_path.exists(),
         "read_only_mode": store.read_only,
-        "last_modified": datetime.fromtimestamp(store.store_path.stat().st_mtime).isoformat() if store.store_path.exists() else None
+        "last_modified": datetime.fromtimestamp(store_path.stat().st_mtime).isoformat() if store_path.exists() else None,
+        "environment_variables": {
+            "CREDENTIAL_MANAGER_READ_ONLY": os.getenv('CREDENTIAL_MANAGER_READ_ONLY', 'true')
+        }
     }
 
 @mcp.resource("credential://help")
@@ -327,6 +359,7 @@ Credential Manager Help
 
 This MCP server helps you manage API credentials securely. 
 Current mode: {mode_text}
+Storage location: {store.store_path}
 
 Available tools:
 {tools_text}
@@ -337,22 +370,30 @@ Credential fields:
 - base_url: The application's base URL
 - access_token: The API token/key
 - user_name: Optional username (shown only when multiple credentials for same app)
-- expires: Expiration date string or "never"
+- expires: ISO datetime (YYYY-MM-DDTHH:MM:SS) or "never"
 
-Examples:
+Storage:
+- Fixed location: ~/.credential-manager-mcp/credentials.json
+
+Environment Variables:
+- CREDENTIAL_MANAGER_READ_ONLY: Set to 'false' to enable write operations (default: 'true')
+
+Tool Examples:
 - list_credentials()
 - get_credential_details("credential-id-here")
-{'- add_credential("GitHub", "https://api.github.com", "ghp_xxxx", "myuser", "2024-12-31")' if not store.read_only else ''}
+{'- add_credential("GitHub", "https://api.github.com", "ghp_xxxx", "myuser", "2024-12-31T23:59:59")' if not store.read_only else ''}
 
 Security Features:
-- Local storage only in credentials.json
+- Local storage only (no network transmission)
 - Multi-instance support with file locking
-- Read-only mode for security (set CREDENTIAL_MANAGER_READ_ONLY=false to enable writes)
+- Read-only mode for security by default
+- Simple, predictable home directory storage
 """
 
 def main():
     """Main entry point for the credential manager MCP server"""
-    print(f"Starting Credential Manager in {'read-only' if READ_ONLY_MODE else 'read-write'} mode")
+    print(f"🔐 Starting Credential Manager in {'read-only' if READ_ONLY_MODE else 'read-write'} mode")
+    print(f"📁 Storage location: {store.store_path}")
     mcp.run()
 
 if __name__ == "__main__":
